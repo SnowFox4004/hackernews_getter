@@ -12,4 +12,4 @@ wheels/
 stories/**
 *.epub
 *.pdf
-*.txt
+algolia_api_doc.txt
