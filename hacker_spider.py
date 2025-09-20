@@ -276,11 +276,11 @@ if __name__ == "__main__":
     #     print(*story.comments, sep="\n\t")
     #     print()
 
-    # weekly = asyncio.run(search_weekly_top_stories(20))
-    # print(len(weekly))
-    # downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
-    # print(len(downloaded))
-    # # construct_epub_book(downloaded)
+    weekly = asyncio.run(search_weekly_top_stories(20))
+    print(len(weekly))
+    downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
+    print(len(downloaded))
+    # construct_epub_book(downloaded)
 
     current_date = datetime.datetime.now().date()
     target_path = "stories/" + f"{current_date.year}-{current_date.month}/"
