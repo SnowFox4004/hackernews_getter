@@ -1,3 +1,6 @@
+import html
+
+
 def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
     import os
     from weasyprint import HTML, CSS
@@ -66,7 +69,10 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
 
         print(f"处理文件: {html_file}")
         # 为每个HTML文件创建文档对象
-        html = HTML(html_file)
+        html_text = open(html_file, "r", encoding="utf-8").read()
+        html_text = html.unescape(html_text)
+        html_ = HTML(string=html_text)
+
         # 如果是第一个文档，不添加分页；其他文档添加分页
         if i > 0:
             # 添加分页样式
@@ -74,13 +80,13 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
                 string="body { page-break-before: always; }", font_config=font_config
             )
             all_docs.append(
-                html.render(
+                html_.render(
                     stylesheets=[base_css, specific_css], font_config=font_config
                 )
             )
         else:
             all_docs.append(
-                html.render(stylesheets=[base_css], font_config=font_config)
+                html_.render(stylesheets=[base_css], font_config=font_config)
             )
 
     if not all_docs:
