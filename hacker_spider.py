@@ -222,6 +222,9 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
             result = trafilatura.extract(
                 blog_content, output_format="html", include_formatting=True
             )
+
+            if result is None:
+                result = f"<h1> ERROR </h1><br><a href={url}>{url}</a>"
     except:
         err_flag = True
 
