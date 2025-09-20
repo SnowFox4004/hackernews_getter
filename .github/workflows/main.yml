@@ -2,7 +2,7 @@ on:
   schedule:
     - cron: '0 0 * * 0'  
   push:  # 可选：推送代码时也触发，便于测试
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:      # 允许手动触发
 jobs:
   build-and-generate:
