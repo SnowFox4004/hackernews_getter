@@ -3,6 +3,7 @@ on:
     - cron: '0 0 * * 0'  
   push:  # 可选：推送代码时也触发，便于测试
     branches: [ main ]
+  workflow_dispatch:      # 允许手动触发
 jobs:
   build-and-generate:
     runs-on: ubuntu-latest  # 使用最新的 Ubuntu 运行器
