@@ -13,6 +13,7 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
     """
     # 创建字体配置
     html_files.sort()
+    html_files.reverse()
     font_config = FontConfiguration()
 
     # # 定义基础CSS样式，确保每个HTML从新页面开始
@@ -48,6 +49,9 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
         }}
         .new-page {{
              page-break-before: always;
+        }}
+        .page-break {{
+            page-break-before: always;
         }}
     """,
         font_config=font_config,
