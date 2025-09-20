@@ -12,6 +12,7 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
         paper_size: 纸张大小，如'A4', 'Letter', 'Legal'等
     """
     # 创建字体配置
+    html_files.sort()
     font_config = FontConfiguration()
 
     # # 定义基础CSS样式，确保每个HTML从新页面开始
