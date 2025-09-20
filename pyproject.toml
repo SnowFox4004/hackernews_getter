@@ -1,0 +1,18 @@
+[project]
+name = "hackernews"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "ebooklib>=0.19",
+    "httpx>=0.28.1",
+    "newspaper3k>=0.2.8",
+    "python-hn>=0.0.4",
+    "readability-lxml>=0.8.4.1",
+    "requests>=2.32.5",
+    "tqdm>=4.67.1",
+    "trafilatura>=2.0.0",
+    "weasyprint>=66.0",
+]
