@@ -17,11 +17,28 @@ import aiofiles
 import random as rnd
 import ebooklib.epub as epub
 from concat_htmls import html_files_to_pdf
+import html
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
 
-
+# HEADERS = {
+#     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
+# }
+HEADERS = {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+    "priority": "u=0, i",
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-user": "?1",
+    "upgrade-insecure-requests": "1",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
+}
 @dataclass
 class Item:
 
@@ -72,7 +89,7 @@ async def search_weekly_top_stories(num_stories: int):
 
             hits += response.json()["hits"]
             page += 1
-    return hits
+    return hits[:num_stories]
 
 
 async def get_story(hit_result: dict):
@@ -142,12 +159,75 @@ def construct_epub_book(html_texts: list[str]):
     spine = ["nav"]  # spine 必须以 nav 开头
     toc = []
 
+    # 创建CSS样式文件
+    css_content = """
+    body {
+        font-family: Georgia, serif;
+        font-size: 12pt;
+        line-height: 1.4;
+        margin: 20px;
+        color: #000000;
+    }
+    h1 {
+        font-size: 18pt;
+    }
+    .story-info {
+        font-size: 10pt;
+        color: #666666;
+        margin: 10px 0;
+    }
+    .comment {
+        border-left: 1px solid #cccccc;
+        margin: 10px 0;
+        padding-left: 10px;
+    }
+    .comment-header {
+        font-size: 10pt;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .comment-text {
+        margin: 5px 0;
+    }
+    .comment-level-0 { margin-left: 0; }
+    .comment-level-1 { margin-left: 20px; }
+    .comment-level-2 { margin-left: 40px; }
+    .comment-level-3 { margin-left: 60px; }
+    .comment-level-4 { margin-left: 80px; }
+    .comment-level-5 { margin-left: 100px; }
+    """
+
+    # 创建EPUB CSS项目
+    nav_css = epub.EpubItem(
+        uid="style_nav",
+        file_name="style/nav.css",
+        media_type="text/css",
+        content=css_content,
+    )
+
+    # 添加CSS到书籍
+    book.add_item(nav_css)
+
     for i, html_text in tqdm.tqdm(enumerate(html_texts)):
         title = f"Story #{i+1}"
         file_name = f"story_{i:03d}.xhtml"
         item_id = f"story_{i}"
 
         item = epub.EpubHtml(title=title, file_name=file_name, uid=item_id, lang="en")
+
+        html_text = html.unescape(html_text)
+        if "<style>" in html_text:
+            # 样式放在body内才会在epub.write_epub()中保留
+            print("<style> found in html_text")
+            html_text = html_text.replace(
+                "<body>",
+                f"<body><style>{css_content}</style>",
+                1,
+            )
+
+        # if i == 1:
+        #     print(html_text)
+
         item.content = html_text
         book.add_item(item)
 
@@ -162,7 +242,9 @@ def construct_epub_book(html_texts: list[str]):
     book.spine = spine
 
     # 生成 EPUB 文件
-    output_filename = f"HackerNews_{datetime.datetime.now().strftime('%Y%m%d')}.epub"
+    output_filename = (
+        "outs/" + f"HackerNews_{datetime.datetime.now().strftime('%Y%m%d')}.epub"
+    )
     try:
         epub.write_epub(output_filename, book)
         print(f"EPUB 生成成功: {output_filename}")
@@ -215,18 +297,22 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
     err_flag = False
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.get(url)
+            response = await client.get(url, headers=HEADERS, follow_redirects=True)
             response.raise_for_status()
 
             blog_content = response.content.decode(response.encoding)
             result = trafilatura.extract(
-                blog_content, output_format="html", include_formatting=True
+                blog_content,
+                output_format="html",
+                include_formatting=True,
+                favor_recall=True,
             )
 
             if result is None:
                 result = f"<h1> ERROR </h1><br><a href={url}>{url}</a>"
-    except:
+    except Exception as err:
         err_flag = True
+        result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><br><p>{str(err)}</p>"
 
     if save_flag:
         async with aiofiles.open(
@@ -275,17 +361,17 @@ if __name__ == "__main__":
     #     print("\n\t", end="")
     #     print(*story.comments, sep="\n\t")
     #     print()
-
-    weekly = asyncio.run(search_weekly_top_stories(20))
+    os.makedirs("outs/", exist_ok=True)
+    weekly = asyncio.run(search_weekly_top_stories(10))
     print(len(weekly))
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
     print(len(downloaded))
-    # construct_epub_book(downloaded)
+    construct_epub_book(downloaded)
 
     current_date = datetime.datetime.now().date()
     target_path = "stories/" + f"{current_date.year}-{current_date.month}/"
     html_files_to_pdf(
         [os.path.join(target_path, i) for i in os.listdir(target_path)],
-        "output.pdf",
+        "outs/output.pdf",
         paper_size="A5",
     )

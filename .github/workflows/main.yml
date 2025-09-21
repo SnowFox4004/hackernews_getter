@@ -31,6 +31,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: generated-epub
-        path: output.pdf  # 你生成的 EPUB 文件路径
+        path: outs/ # 你生成的 EPUB 文件路径
         # path 也可以是目录，例如 'outputs/'
         retention-days: 7  # 可选：设置 artifact 保留天数（默认 90）
