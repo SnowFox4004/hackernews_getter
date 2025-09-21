@@ -300,7 +300,11 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
             response = await client.get(url, headers=HEADERS, follow_redirects=True)
             response.raise_for_status()
 
-            blog_content = response.content.decode(response.encoding)
+            try:
+                blog_content = response.content.decode(response.encoding)
+            except:
+                blog_content = response.text
+
             result = trafilatura.extract(
                 blog_content,
                 output_format="html",
