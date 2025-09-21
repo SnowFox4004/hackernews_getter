@@ -1,30 +1,22 @@
-import requests
-import httpx
-import trafilatura
-import newspaper
-from bs4 import BeautifulSoup
-from readability import Document
-import tqdm
-from dataclasses import dataclass
-import hn
-import time
-import datetime
-from html_generator import HTMLGenerator
-
 import asyncio
-import os
-import aiofiles
-import random as rnd
-import ebooklib.epub as epub
-from concat_htmls import html_files_to_pdf
+import datetime
 import html
+import os
+import random as rnd
+import time
+
+import aiofiles
+import ebooklib.epub as epub
+import httpx
+import tqdm
+import trafilatura
+
+from concat_htmls import html_files_to_pdf
+from html_generator import HTMLGenerator
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
 
-# HEADERS = {
-#     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
-# }
 HEADERS = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "accept-encoding": "gzip, deflate, br, zstd",
@@ -39,26 +31,6 @@ HEADERS = {
     "upgrade-insecure-requests": "1",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
 }
-@dataclass
-class Item:
-
-    title: str
-    hn_url: str  # url of hacker news post
-    ori_url: str  # url of original source
-    content: str
-    kids: list[str]
-    timestamp: int
-    score: int
-
-    # def __init__(self, title: str, url: str, content: str = None):
-    #     self.title = title
-    #     self.url = url
-    #     self.content = content
-    #     self.comments = []
-
-    # def add_comment(self, comment: str):
-    #     self.comments.append(comment)
-
 
 async def get_time_range():
     # timestamp of 1 week ago and now
@@ -94,7 +66,7 @@ async def search_weekly_top_stories(num_stories: int):
 
 async def get_story(hit_result: dict):
     get_story_url = f"{URL_ENDPOINT}/items/"
-    await asyncio.sleep(rnd.random())
+    await asyncio.sleep(rnd.random() * 1.5)
     async with httpx.AsyncClient(timeout=25) as client:
         story_id = hit_result["objectID"]
         story_url = get_story_url + story_id
@@ -118,7 +90,7 @@ async def download_stories(hits: list, save_to_file: bool = False):
     ]
     stories = await asyncio.gather(*tasks)
     story_texts = []
-    for story in tqdm.tqdm(stories):
+    for story in tqdm.tqdm(stories, total=len(stories)):
         if save_to_file:
             generator.save_html(story, os.path.join(target_dir, f"{story['id']}.html"))
 
@@ -151,12 +123,11 @@ def construct_epub_book(html_texts: list[str]):
     book.set_title(f"Hacker News - {datetime.datetime.now().strftime('%Y-%m-%d')}")
     book.add_author("SnowFox4004")
 
-    # 必须先添加导航组件（EPUB 标准要求）
+    # 必须先添加导航组件
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
 
-    # 添加 HTML 内容
-    spine = ["nav"]  # spine 必须以 nav 开头
+    spine = ["nav"]
     toc = []
 
     # 创建CSS样式文件
@@ -208,7 +179,7 @@ def construct_epub_book(html_texts: list[str]):
     # 添加CSS到书籍
     book.add_item(nav_css)
 
-    for i, html_text in tqdm.tqdm(enumerate(html_texts)):
+    for i, html_text in tqdm.tqdm(enumerate(html_texts), total=len(html_texts)):
         title = f"Story #{i+1}"
         file_name = f"story_{i:03d}.xhtml"
         item_id = f"story_{i}"
@@ -218,7 +189,7 @@ def construct_epub_book(html_texts: list[str]):
         html_text = html.unescape(html_text)
         if "<style>" in html_text:
             # 样式放在body内才会在epub.write_epub()中保留
-            print("<style> found in html_text")
+
             html_text = html_text.replace(
                 "<body>",
                 f"<body><style>{css_content}</style>",
@@ -250,44 +221,6 @@ def construct_epub_book(html_texts: list[str]):
     except Exception as e:
         print(f"EPUB 生成失败: {str(e)}")
         raise
-
-
-# def construct_epub_book(html_texts: list[str, str]):
-#     book = epub.EpubBook()
-#     book.set_title(f"Hacker News - {datetime.datetime.now().strftime('%Y-%m-%d')}")
-#     book.add_author("SnowFox4004")
-
-#     # toc = []
-#     for i, html_text in enumerate(html_texts):
-#         item = epub.EpubHtml(title=f"story_{i:03d}", file_name=f"{i}.xhtml", lang="en")
-#         item.content = html_text
-#         book.add_item(item)
-#         # toc.append(book.get_item_with_id(f"{id}.xhtml"))
-#     # 获取所有HTML项
-#     html_items = [item for item in book.get_items() if isinstance(item, epub.EpubHtml)]
-
-#     # # 创建目录 - 简单列表形式
-#     # book.toc = [epub.Link(item.file_name, item.title, item.id) for item in html_items]
-
-#     # 或更结构化的形式（推荐）
-#     book.toc = [
-#         epub.Section("Hacker News Stories"),
-#         [epub.Link(item.file_name, item.title, item.id) for item in html_items],
-#     ]
-
-#     # book.toc = (
-#     #     epub.EpubToc("Table of Contents"),
-#     #     [item for item in book.get_items() if isinstance(item, epub.EpubHtml)],
-#     # )
-#     # book.add_item(epub.EpubNcx())
-#     # book.add_item(epub.EpubNav())
-#     # book.spine = ["nav"] + [
-#     #     item for item in book.get_items() if isinstance(item, epub.EpubHtml)
-#     # ]
-
-#     epub.write_epub(
-#         "HackerNews_{}.epub".format(datetime.datetime.now().strftime("%Y%m%d")), book
-#     )
 
 
 async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool):
@@ -325,49 +258,14 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
     print(f"get original {url[8:50]:>45} done. error?: {err_flag}")
     return result
 
-
-# def get_hn_top_stories():
-#     url = "https://hacker-news.firebaseio.com/v0/topstories.json"
-#     response = requests.get(url)
-#     response = response.json()
-
-#     fetched_stories = []
-
-#     for story_id in tqdm.tqdm(response[:10], desc="Fetching stories"):
-#         story = requests.get(
-#             f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
-#         )
-#         story = story.json()
-#         new_story = Story(story["title"], story["url"])
-#         print(story)
-
-#         fetched_stories.append(new_story)
-#         for comment in story["kids"][:5]:
-#             comment = requests.get(
-#                 f"https://hacker-news.firebaseio.com/v0/item/{comment}.json"
-#             )
-#             comment = comment.json()
-#             print(comment)
-
-#             new_story.add_comment(f'{comment.get("by")}: {comment.get("text")}')
-
-#     return fetched_stories
-
-
 if __name__ == "__main__":
-    # stories = get_hn_top_stories()
-    # for story in stories:
-    #     print(story.title)
-    #     print(story.url)
-    #     print(story.content)
-    #     print("\n\t", end="")
-    #     print(*story.comments, sep="\n\t")
-    #     print()
     os.makedirs("outs/", exist_ok=True)
-    weekly = asyncio.run(search_weekly_top_stories(10))
-    print(len(weekly))
+
+    weekly = asyncio.run(search_weekly_top_stories(25))
+    print("get", len(weekly), "top stories.")
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
-    print(len(downloaded))
+    print("downloaded", len(downloaded), "stories.")
+
     construct_epub_book(downloaded)
 
     current_date = datetime.datetime.now().date()

@@ -1,5 +1,5 @@
 import html
-
+from tqdm import tqdm
 
 def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
     import os
@@ -62,12 +62,12 @@ def html_files_to_pdf(html_files, output_pdf, paper_size="A4"):
 
     # 创建PDF文档
     all_docs = []
-    for i, html_file in enumerate(html_files):
+    for i, html_file in tqdm(enumerate(html_files), total=len(html_files)):
         if not os.path.exists(html_file):
             print(f"警告: 文件 {html_file} 不存在，跳过")
             continue
 
-        print(f"处理文件: {html_file}")
+        # print(f"处理文件: {html_file}")
         # 为每个HTML文件创建文档对象
         html_text = open(html_file, "r", encoding="utf-8").read()
         html_text = html.unescape(html_text)
