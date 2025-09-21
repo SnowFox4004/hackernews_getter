@@ -26,6 +26,11 @@ jobs:
 
     - name: Run Python script
       run: python hacker_spider.py  # 执行你的主脚本
+    
+    - name: Convert To AZW3
+      run: |
+        sudo apt install -y calibre
+        ebook-convert outs/HackerNews.epub outs/HackerNews.azw3
       
     - name: Upload EPUB artifact
       uses: actions/upload-artifact@v4

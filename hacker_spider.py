@@ -242,9 +242,7 @@ def construct_epub_book(html_texts: list[str]):
     book.spine = spine
 
     # 生成 EPUB 文件
-    output_filename = (
-        "outs/" + f"HackerNews_{datetime.datetime.now().strftime('%Y%m%d')}.epub"
-    )
+    output_filename = "outs/" + f"HackerNews.epub"
     try:
         epub.write_epub(output_filename, book)
         print(f"EPUB 生成成功: {output_filename}")
