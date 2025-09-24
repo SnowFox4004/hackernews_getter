@@ -1,6 +1,6 @@
 on:
   schedule:
-    - cron: '0 0 * * 0'  
+    - cron: '0 0 * * 6'  
   push:  # 可选：推送代码时也触发，便于测试
     branches: [ master ]
   workflow_dispatch:      # 允许手动触发
@@ -23,6 +23,8 @@ jobs:
         pip install -r requirements.txt  # 安装你的第三方库
         sudo apt update
         sudo apt install -y python3-pip libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0 libffi-dev libjpeg-dev libopenjp2-7-dev
+        sudo apt install -y neofetch
+        neofetch
 
     - name: Run Python script
       run: python hacker_spider.py  # 执行你的主脚本

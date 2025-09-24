@@ -5,7 +5,7 @@ Generates clean HTML suitable for Kindle devices from Hacker News JSON data
 
 import json
 from typing import Dict, List, Union, Optional
-
+from utils import iso_to_string, convert_utc_to_local_v2
 
 class HTMLGenerator:
     def __init__(self, max_depth: int = 5, max_comments_per_level: int | list = 10):
@@ -96,7 +96,7 @@ class HTMLGenerator:
                 f'<div class="story-info">',
                 f"  <p>Author: {self._escape_html(story_data.get('author', 'Unknown'))} | ",
                 f"  Points: {story_data.get('points', 0)} | ",
-                f"  Posted: {story_data.get('created_at', '')}</p>",
+                f"  Posted: {convert_utc_to_local_v2(story_data.get('created_at', '1999-09-09T11:45:14.000Z'))}</p>",
                 f"</div>",
             ]
         )

@@ -13,3 +13,6 @@ stories/**
 *.epub
 *.pdf
 algolia_api_doc.txt
+lib_studies/**
+
+.gitignore

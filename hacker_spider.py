@@ -13,22 +13,12 @@ import trafilatura
 
 from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
+from html_img_embedder import HTMLImageEmbedder, embed_images_in_html_string
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
 
 HEADERS = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "accept-encoding": "gzip, deflate, br, zstd",
-    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
-    "priority": "u=0, i",
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "same-origin",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
 }
 
@@ -66,13 +56,13 @@ async def search_weekly_top_stories(num_stories: int):
 
 async def get_story(hit_result: dict):
     get_story_url = f"{URL_ENDPOINT}/items/"
-    await asyncio.sleep(rnd.random() * 1.5)
+    await asyncio.sleep(rnd.random() * 2)
     async with httpx.AsyncClient(timeout=25) as client:
         story_id = hit_result["objectID"]
         story_url = get_story_url + story_id
         story = await client.get(story_url)
         story = story.json()
-        print(f"get story {story_id} done.")
+        print(f"get story {hit_result.get("title", None) or story_id:>80} done.")
         return story
 
 
@@ -90,12 +80,12 @@ async def download_stories(hits: list, save_to_file: bool = False):
     ]
     stories = await asyncio.gather(*tasks)
     story_texts = []
-    for story in tqdm.tqdm(stories, total=len(stories)):
+    for idx, story in tqdm.tqdm(enumerate(stories), total=len(stories)):
         if save_to_file:
             generator.save_html(story, os.path.join(target_dir, f"{story['id']}.html"))
 
         html_text = generator.generate_html(story)
-        story_texts.append(html_text)
+        story_texts.append((story.get("title", f"HN Story_{idx}"), html_text))
 
     origin_page_tasks = [
         asyncio.create_task(
@@ -106,13 +96,13 @@ async def download_stories(hits: list, save_to_file: bool = False):
     origin_pages = await asyncio.gather(*origin_page_tasks)
 
     for hn, ori in zip(story_texts, origin_pages):
-        html_texts.append(ori)
+        html_texts.append((hn[0], ori))
         html_texts.append(hn)
 
     return html_texts
 
 
-def construct_epub_book(html_texts: list[str]):
+def construct_epub_book(html_texts: list[str, str]):
     """
     构建包含 Hacker News 故事的 EPUB 电子书
 
@@ -179,8 +169,10 @@ def construct_epub_book(html_texts: list[str]):
     # 添加CSS到书籍
     book.add_item(nav_css)
 
-    for i, html_text in tqdm.tqdm(enumerate(html_texts), total=len(html_texts)):
-        title = f"Story #{i+1}"
+    for i, (title, html_text) in tqdm.tqdm(
+        enumerate(html_texts), total=len(html_texts)
+    ):
+        title = title or f"Story #{i+1}"
         file_name = f"story_{i:03d}.xhtml"
         item_id = f"story_{i}"
 
@@ -224,30 +216,38 @@ def construct_epub_book(html_texts: list[str]):
 
 
 async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool):
+
     result = f"<h1> ERROR </h1><br><a href={url}>{url}</a>"
     err_flag = False
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=20, verify=False) as client:
             response = await client.get(url, headers=HEADERS, follow_redirects=True)
             response.raise_for_status()
 
-            try:
-                blog_content = response.content.decode(response.encoding)
-            except:
-                blog_content = response.text
+            # try:
+            #     blog_content = response.content.decode(response.encoding)
+            # except:
+            #     blog_content = response.text
+            blog_content = response.text
 
             result = trafilatura.extract(
                 blog_content,
                 output_format="html",
                 include_formatting=True,
                 favor_recall=True,
+                include_images=True,
             )
 
             if result is None:
-                result = f"<h1> ERROR </h1><br><a href={url}>{url}</a>"
+                print(
+                    f"{url} 's trafilatura.extract() result is None. \n\n{blog_content[:1000]}"
+                )
+                result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
     except Exception as err:
         err_flag = True
         result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><br><p>{str(err)}</p>"
+
+    result = await embed_images_in_html_string(result, url)
 
     if save_flag:
         async with aiofiles.open(
@@ -255,7 +255,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
         ) as fp:
             await fp.write(result)
 
-    print(f"get original {url[8:50]:>45} done. error?: {err_flag}")
+    print(f"get original {str(url)[8:50]:>45} done. error?: {err_flag}")
     return result
 
 if __name__ == "__main__":
