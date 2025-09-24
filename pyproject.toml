@@ -19,3 +19,8 @@ dependencies = [
     "trafilatura>=2.0.0",
     "weasyprint>=66.0",
 ]
+
+[dependency-groups]
+dev = [
+    "objprint>=0.3.0",
+]

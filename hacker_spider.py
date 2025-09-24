@@ -34,7 +34,7 @@ async def search_weekly_top_stories(num_stories: int):
     search_url = URL_ENDPOINT + SEARCH_ENDPOINT
 
     hits = []
-    page = 1
+    page = 0
     async with httpx.AsyncClient() as client:
         while len(hits) < num_stories:
             start_time, end_time = await get_time_range()

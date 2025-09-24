@@ -16,3 +16,4 @@ algolia_api_doc.txt
 lib_studies/**
 
 .gitignore
+test*.*
