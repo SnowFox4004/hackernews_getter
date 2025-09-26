@@ -11,6 +11,7 @@ dependencies = [
     "httpx>=0.28.1",
     "ipython>=9.5.0",
     "newspaper3k>=0.2.8",
+    "playwright>=1.55.0",
     "python-dateutil>=2.9.0.post0",
     "python-hn>=0.0.4",
     "readability-lxml>=0.8.4.1",

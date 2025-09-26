@@ -14,6 +14,7 @@ import trafilatura
 from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
 from html_img_embedder import HTMLImageEmbedder, embed_images_in_html_string
+import origin_page_spider as pwSpyder
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
@@ -243,6 +244,27 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     f"{url} 's trafilatura.extract() result is None. \n\n{blog_content[:1000]}"
                 )
                 result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
+            elif len(result) < 500:
+                # seems too short
+                # might need to enable javascript
+                print(
+                    f"simple request result of {url} seems too short. trying to use playwright..."
+                )
+                pw_res = await pwSpyder.get_page_content(url)
+                pw_res = trafilatura.extract(
+                    pw_res,
+                    output_format="html",
+                    include_formatting=True,
+                    favor_recall=True,
+                    include_images=True,
+                )
+
+                result = (
+                    result
+                    + "<br><br><br> <h2>playwright result is as follows</h2>"
+                    + (pw_res if pw_res else "play wright result is None also.")
+                )
+
     except Exception as err:
         err_flag = True
         result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><br><p>{str(err)}</p>"

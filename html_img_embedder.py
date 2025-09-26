@@ -45,7 +45,7 @@ class HTMLImageEmbedder:
     async def download_image(self, url):
         """下载图片并返回base64编码"""
         try:
-            response = await self.client.get(url)
+            response = await self.client.get(url, follow_redirects=True)
             response.raise_for_status()
 
             # 获取图片的MIME类型
