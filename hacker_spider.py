@@ -270,8 +270,8 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 
                 # 使用BeautifulSoup合并两个HTML文档
                 if isinstance(pw_res, str) and BeautifulSoup:
-                    soup2 = BeautifulSoup(result, "html.parser")
-                    soup1 = BeautifulSoup(pw_res, "html.parser")
+                    soup1 = BeautifulSoup(result, "html.parser")
+                    soup2 = BeautifulSoup(pw_res, "html.parser")
 
                     print(
                         f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"

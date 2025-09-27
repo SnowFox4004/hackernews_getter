@@ -4,17 +4,17 @@ import asyncio
 
 async def get_page_content(url: str):
     async with async_playwright() as pw:
-        browser = await pw.firefox.launch(headless=True)
+        browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page()
 
         # 伪装成真实浏览器
-        await page.add_init_script(
-            """
-            navigator.webdriver = undefined;
-            navigator.plugins.length = 1;
-            navigator.platform = 'Win32';
-        """
-        )
+        # await page.add_init_script(
+        #     """
+        #     navigator.webdriver = undefined;
+        #     navigator.plugins.length = 1;
+        #     navigator.platform = 'Win32';
+        # """
+        # )
 
         # 设置用户代理
         await page.set_extra_http_headers(
@@ -24,9 +24,11 @@ async def get_page_content(url: str):
         )
         try:
             await page.goto(url, wait_until="networkidle", timeout=60000)
+            await asyncio.sleep(5)
+            await page.wait_for_load_state("networkidle")
         except Exception as err:
-            content = "Time limite exceeded in playwright"
-            return content
+            print(url, "Time limite exceeded in playwright")
+            return await page.content()
 
         content = await page.content()
         await browser.close()
