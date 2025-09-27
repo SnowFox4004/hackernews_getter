@@ -10,6 +10,7 @@ import ebooklib.epub as epub
 import httpx
 import tqdm
 import trafilatura
+from bs4 import BeautifulSoup
 
 from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
@@ -245,6 +246,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                 )
                 result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
             elif len(result) < 500:
+                result = result.strip()
                 # seems too short
                 # might need to enable javascript
                 print(
@@ -259,11 +261,48 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     include_images=True,
                 )
 
-                result = (
-                    result
-                    + "<br><br><br> <h2>playwright result is as follows</h2>"
-                    + (pw_res if pw_res else "play wright result is None also.")
-                )
+                # 使用BeautifulSoup合并两个HTML文档
+                if isinstance(pw_res, str) and BeautifulSoup:
+                    soup1 = BeautifulSoup(result, "html.parser")
+                    soup2 = BeautifulSoup(pw_res, "html.parser")
+
+                    if soup1.body:  # 应该操作body而不是html
+                        # 创建分隔元素
+                        hr_tag = soup1.new_tag("hr")
+                        heading = soup1.new_tag("h2")
+                        heading.string = "Playwright result is as follows"
+
+                        # 添加到body末尾
+                        soup1.body.append(hr_tag)
+                        soup1.body.append(heading)
+
+                        # 合并内容
+                        if soup2.body:
+                            for element in soup2.body.children:
+                                soup1.body.append(element.extract())
+                        else:
+                            # 如果soup2没有body，直接添加其内容到body
+                            soup1.body.append(soup2)
+
+                        result = str(soup1)
+                else:
+                    # 如果BeautifulSoup不可用或条件不满足，回退到原始方法
+                    if result.endswith("</html>") and isinstance(pw_res, str):
+                        # only append if both results are html
+                        # and original result seems normal
+                        # otherwise might get a lot of garbage
+                        result = result[: -len("</html>")].strip()
+                        result = result.replace("</body>", "", 1).strip()
+
+                    result = (
+                        result
+                        + "<br><br><br> <h2>playwright result is as follows</h2>"
+                        + (
+                            pw_res.replace("<html>", "", 1).replace("<body>", "", 1)
+                            if isinstance(pw_res, str)
+                            else f"play wright result is {pw_res} also.</html>"
+                        )
+                    )
 
     except Exception as err:
         err_flag = True

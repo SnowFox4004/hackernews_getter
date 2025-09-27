@@ -459,6 +459,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiofiles" },
+    { name = "beautifulsoup4" },
     { name = "certifi" },
     { name = "ebooklib" },
     { name = "httpx" },
@@ -482,6 +483,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
+    { name = "beautifulsoup4", specifier = ">=4.13.5" },
     { name = "certifi", specifier = ">=2025.8.3" },
     { name = "ebooklib", specifier = ">=0.19" },
     { name = "httpx", specifier = ">=0.28.1" },

@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "aiofiles>=24.1.0",
+    "beautifulsoup4>=4.13.5",
     "certifi>=2025.8.3",
     "ebooklib>=0.19",
     "httpx>=0.28.1",
