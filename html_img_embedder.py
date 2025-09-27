@@ -10,7 +10,8 @@ from io import BytesIO
 
 
 class HTMLImageEmbedder:
-    def __init__(self, base_url, timeout=30, max_image_size=(1200, 1600)):
+
+    def __init__(self, base_url, timeout=30, max_image_size=(900, 1200)):
         self.base_url = base_url
         self.timeout = timeout
         self.max_image_size = max_image_size  # 适用于Kindle设备的最大图片尺寸
@@ -72,9 +73,7 @@ class HTMLImageEmbedder:
         #     # 对于其他格式，保存为JPEG
         #     image.save(output, format="JPEG", quality=85, optimize=True)
         #     self.mime_type = "image/jpeg"
-        image.save(
-            output, format=image.format or "JPEG", optimize=True, compress_level=5
-        )
+        image.save(output, format="JPEG", optimize=True, compress_level=5, quality=80)
 
         compressed_data = output.getvalue()
         output.close()
