@@ -42,8 +42,51 @@ class HTMLImageEmbedder:
         else:
             return urljoin(self.base_url, src)
 
+    def compress_image(self, image_data):
+        """
+        压缩图片大小
+        :param image_data: 原始图片数据
+        :param max_size: 最大尺寸 (width, height)
+        :return: 压缩后的图片数据
+        """
+        image = Image.open(BytesIO(image_data))
+
+        # 保存原始模式
+        original_mode = image.mode
+
+        # 按比例压缩图片
+        if (
+            image.size[0] > self.max_image_size[0]
+            or image.size[1] > self.max_image_size[1]
+        ):
+            image.thumbnail(self.max_image_size, Image.Resampling.LANCZOS)
+        # image.thumbnail(self.max_image_size, Image.Resampling.LANCZOS)
+
+        # 保持图片模式不变，保留透明度
+        output = BytesIO()
+        # if image.format == "PNG" or original_mode in ("RGBA", "LA", "P"):
+        #     # 对于PNG或带透明度的图片，保存为PNG格式以保留透明度
+        #     image.save(output, format="PNG", optimize=True, compress_level=3)
+        #     self.mime_type = "image/png"
+        # else:
+        #     # 对于其他格式，保存为JPEG
+        #     image.save(output, format="JPEG", quality=85, optimize=True)
+        #     self.mime_type = "image/jpeg"
+        image.save(
+            output, format=image.format or "JPEG", optimize=True, compress_level=5
+        )
+
+        compressed_data = output.getvalue()
+        output.close()
+
+        # 只有当压缩后的数据更小时才返回压缩后的数据
+        if len(compressed_data) < len(image_data):
+            return compressed_data
+        else:
+            return image_data
+
     async def download_image(self, url):
-        """下载图片并返回base64编码"""
+        """下载并压缩图片，返回base64编码的data URI"""
         try:
             response = await self.client.get(url, follow_redirects=True)
             response.raise_for_status()
@@ -53,26 +96,19 @@ class HTMLImageEmbedder:
             if not content_type.startswith("image/"):
                 content_type = self.guess_mime_type(url) or "image/jpeg"
 
-            # 处理图片大小
+            # 获取原始图片数据
             image_data = response.content
+
             try:
-                # 尝试调整图片大小
-                image = Image.open(BytesIO(image_data))
-                if (
-                    image.size[0] > self.max_image_size[0]
-                    or image.size[1] > self.max_image_size[1]
-                ):
-                    image.thumbnail(self.max_image_size, Image.Resampling.LANCZOS)
-                    # 将调整大小后的图片保存到字节流
-                    output = BytesIO()
-                    image.save(output, format=image.format or "JPEG")
-                    image_data = output.getvalue()
+                # 使用新的压缩方法处理图片
+                compressed_image_data = self.compress_image(image_data)
             except Exception as e:
                 # 如果处理图片时出错，使用原始图片数据
-                print(f"调整图片大小时出错 {str(url)[:50]}: {e}")
+                print(f"压缩图片失败 {str(url)[:50]}: {e}")
+                compressed_image_data = image_data
 
             # 转换为base64
-            image_data_base64 = base64.b64encode(image_data).decode("utf-8")
+            image_data_base64 = base64.b64encode(compressed_image_data).decode("utf-8")
             return f"data:{content_type};base64,{image_data_base64}"
 
         except Exception as e:
