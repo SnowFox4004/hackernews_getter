@@ -73,7 +73,9 @@ class HTMLImageEmbedder:
         #     # 对于其他格式，保存为JPEG
         #     image.save(output, format="JPEG", quality=85, optimize=True)
         #     self.mime_type = "image/jpeg"
-        image.save(output, format="JPEG", optimize=True, compress_level=5, quality=80)
+        image.save(
+            output, format=image.format or "JPEG", optimize=True, compress_level=5
+        )
 
         compressed_data = output.getvalue()
         output.close()
