@@ -266,6 +266,9 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     soup1 = BeautifulSoup(result, "html.parser")
                     soup2 = BeautifulSoup(pw_res, "html.parser")
 
+                    print(
+                        f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"
+                    )
                     if soup1.body:  # 应该操作body而不是html
                         # 创建分隔元素
                         hr_tag = soup1.new_tag("hr")
@@ -278,16 +281,22 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 
                         # 合并内容
                         if soup2.body:
-                            for element in soup2.body.children:
+                            for element in tqdm.tqdm(
+                                soup2.body.children,
+                                desc=f"Merging htmls of {url}",
+                                total=len(list(soup2.body.children)),
+                            ):
                                 soup1.body.append(element.extract())
                         else:
                             # 如果soup2没有body，直接添加其内容到body
+                            print(f"soup2 has no body tag, appending whole soup2 {url}")
                             soup1.body.append(soup2)
 
                         result = str(soup1)
                 else:
                     # 如果BeautifulSoup不可用或条件不满足，回退到原始方法
                     if result.endswith("</html>") and isinstance(pw_res, str):
+                        print("falling back to original method", url)
                         # only append if both results are html
                         # and original result seems normal
                         # otherwise might get a lot of garbage

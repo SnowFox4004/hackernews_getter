@@ -22,10 +22,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt  # 安装你的第三方库
         pip install playwright
-        playwright install
+        python -m playwright install --with-deps
         sudo apt update
-        sudo apt install -y python3-pip libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0 libffi-dev libjpeg-dev libopenjp2-7-dev
-        sudo apt install -y neofetch
+        sudo apt install -y neofetch python3-pip libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0 libffi-dev libjpeg-dev libopenjp2-7-dev
         neofetch
 
     - name: Run Python script
@@ -43,3 +42,10 @@ jobs:
         path: outs/ # 你生成的 EPUB 文件路径
         # path 也可以是目录，例如 'outputs/'
         retention-days: 7  # 可选：设置 artifact 保留天数（默认 90）
+    
+    - name: Upload debug files
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-files
+        path: stories/
+        retention-days: 7
