@@ -252,7 +252,10 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                 print(
                     f"simple request result of {url} seems too short. trying to use playwright..."
                 )
+
+                current_time = time.time()
                 pw_res = await pwSpyder.get_page_content(url)
+                print(f"playwright request time: {time.time() - current_time}", url)
                 pw_res = trafilatura.extract(
                     pw_res,
                     output_format="html",
@@ -261,10 +264,14 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     include_images=True,
                 )
 
+                open(f"./stories/pw_res_{id}.html", "w+", encoding="utf-8").write(
+                    pw_res
+                )
+
                 # 使用BeautifulSoup合并两个HTML文档
                 if isinstance(pw_res, str) and BeautifulSoup:
-                    soup1 = BeautifulSoup(result, "html.parser")
-                    soup2 = BeautifulSoup(pw_res, "html.parser")
+                    soup2 = BeautifulSoup(result, "html.parser")
+                    soup1 = BeautifulSoup(pw_res, "html.parser")
 
                     print(
                         f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"
