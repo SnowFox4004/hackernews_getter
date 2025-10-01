@@ -2,7 +2,7 @@ from playwright.async_api import async_playwright
 import asyncio
 import httpx
 import bs4 as BeautifulSoup
-
+import trafilatura
 
 async def get_page_content_playwright(url: str):
     async with async_playwright() as pw:
@@ -29,6 +29,13 @@ async def get_page_content_playwright(url: str):
             return await page.content()
 
         content = await page.content()
+        content = trafilatura.extract(
+            content,
+            output_format="html",
+            include_formatting=True,
+            favor_recall=True,
+            include_images=True,
+        )
         await browser.close()
         return content
     return "unknown error"
@@ -46,12 +53,16 @@ async def get_page_content_requests(url: str, headers: dict):
             return f"HTTPX Error: {err}"
         blog_content = response.text
 
-        result = blog_content
+        result = trafilatura.extract(
+            blog_content,
+            output_format="html",
+            include_formatting=True,
+            favor_recall=True,
+            include_images=True,
+        )
 
         if result is None:
-            result = (
-                f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
-            )
+            result = f"<html><body><h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p></body></html>"
         return result
 
 
@@ -66,6 +77,9 @@ async def concat_htmls(html_list: list[str]):
     concated = htmls[idx][max(idx, len(htmls) - 1)]
 
     for method_id, (title, html) in enumerate(htmls):
+        if method_id == idx:
+            continue
+
         hr_tag = concated.new_tag("hr")
         heading = concated.new_tag("h2")
         heading.string = f"Content from method {title}"
@@ -119,12 +133,14 @@ async def get_origin(url: str, headers: dict):
                 [("request", content), ("playwright", pw_content)]
             )
 
-            # open(
-            #     f"./stories/pw_res_{get_pathable_text(url)}.html",
-            #     "w+",
-            #     encoding="utf-8",
-            # ).write(content)
-
+            open(
+                f"./stories/pw_res_{get_pathable_text(url)}.html",
+                "w+",
+                encoding="utf-8",
+            ).write(content)
+            text_len = BeautifulSoup.BeautifulSoup(content, "html.parser").text
+            if content is None or len(text_len) < 500:
+                is_error = True
     except Exception as e:
         print(f"Error processing {str(url)[8:50]:>45}: {e}")
         # raise e
@@ -146,7 +162,7 @@ if __name__ == "__main__":
     )
     # print(content)
 
-    import trafilatura
+    # import trafilatura
 
     content = trafilatura.extract(
         blog_content,

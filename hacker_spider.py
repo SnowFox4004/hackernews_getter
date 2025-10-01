@@ -219,7 +219,7 @@ def construct_epub_book(html_texts: list[str, str]):
 
 async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool):
 
-    result = f"<h1> ERROR </h1><br><a href={url}>{url}</a>"
+    result = f"<html><body><h1> ERROR </h1><br><a href={url}>{url}</a></body></html>"
     err_flag = False
     try:
         async with httpx.AsyncClient(timeout=20, verify=False) as client:
@@ -233,19 +233,13 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
             # blog_content = response.text
             blog_content, err_flag = await originSpider.get_origin(url, HEADERS)
 
-            result = trafilatura.extract(
-                blog_content,
-                output_format="html",
-                include_formatting=True,
-                favor_recall=True,
-                include_images=True,
-            )
+            result = blog_content
 
             if result is None:
                 print(
                     f"{url} 's trafilatura.extract() result is None. \n\n{blog_content[:1000]}"
                 )
-                result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
+                result = f"<html><body><h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p></body></html>"
 
                 # # 使用BeautifulSoup合并两个HTML文档
                 # if isinstance(pw_res, str) and BeautifulSoup:
@@ -301,7 +295,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 
     except Exception as err:
         err_flag = True
-        result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><br><p>{str(err)}</p>"
+        result = f"<html><body><h1> ERROR </h1><br><a href={url}>{url}</a><br><p>{str(err)}</p></body></html>"
 
     result = await embed_images_in_html_string(result, url)
 
@@ -317,7 +311,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)
 
-    weekly = asyncio.run(search_weekly_top_stories(15))
+    weekly = asyncio.run(search_weekly_top_stories(20))
     print("get", len(weekly), "top stories.")
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
     print("downloaded", len(downloaded), "stories.")

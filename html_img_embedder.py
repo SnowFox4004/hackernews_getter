@@ -204,7 +204,7 @@ class HTMLImageEmbedder:
 
 
 async def embed_images_in_html(
-    html_file_path, base_url, output_file_path=None, max_image_size=(1200, 1600)
+    html_file_path, base_url, output_file_path=None, max_image_size=(900, 1200)
 ):
     """
     主函数：将HTML文件中的图片转换为内嵌base64格式
@@ -240,7 +240,7 @@ async def embed_images_in_html(
     return output_file_path
 
 
-async def embed_images_in_html_string(html_string, url, max_image_size=(1200, 1600)):
+async def embed_images_in_html_string(html_string, url, max_image_size=(900, 1200)):
     """
     主函数：将HTML字符串中的图片转换为内嵌base64格式
 
