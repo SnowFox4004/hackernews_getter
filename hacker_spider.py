@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
 from html_img_embedder import HTMLImageEmbedder, embed_images_in_html_string
-import origin_page_spider as pwSpyder
+import origin_page_spider as originSpider
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
@@ -223,14 +223,15 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
     err_flag = False
     try:
         async with httpx.AsyncClient(timeout=20, verify=False) as client:
-            response = await client.get(url, headers=HEADERS, follow_redirects=True)
-            response.raise_for_status()
+            # response = await client.get(url, headers=HEADERS, follow_redirects=True)
+            # response.raise_for_status()
 
-            # try:
-            #     blog_content = response.content.decode(response.encoding)
-            # except:
-            #     blog_content = response.text
-            blog_content = response.text
+            # # try:
+            # #     blog_content = response.content.decode(response.encoding)
+            # # except:
+            # #     blog_content = response.text
+            # blog_content = response.text
+            blog_content, err_flag = await originSpider.get_origin(url, HEADERS)
 
             result = trafilatura.extract(
                 blog_content,
@@ -245,80 +246,58 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     f"{url} 's trafilatura.extract() result is None. \n\n{blog_content[:1000]}"
                 )
                 result = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p>"
-            elif len(result) < 500:
-                result = result.strip()
-                # seems too short
-                # might need to enable javascript
-                print(
-                    f"simple request result of {url} seems too short. trying to use playwright..."
-                )
 
-                current_time = time.time()
-                pw_res = await pwSpyder.get_page_content(url)
-                print(f"playwright request time: {time.time() - current_time}", url)
-                pw_res = trafilatura.extract(
-                    pw_res,
-                    output_format="html",
-                    include_formatting=True,
-                    favor_recall=True,
-                    include_images=True,
-                )
+                # # 使用BeautifulSoup合并两个HTML文档
+                # if isinstance(pw_res, str) and BeautifulSoup:
+                #     soup1 = BeautifulSoup(result, "html.parser")
+                #     soup2 = BeautifulSoup(pw_res, "html.parser")
 
-                open(f"./stories/pw_res_{id}.html", "w+", encoding="utf-8").write(
-                    pw_res
-                )
+                #     print(
+                #         f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"
+                #     )
+                #     if soup1.body:  # 应该操作body而不是html
+                #         # 创建分隔元素
+                #         hr_tag = soup1.new_tag("hr")
+                #         heading = soup1.new_tag("h2")
+                #         heading.string = "Playwright result is as follows"
 
-                # 使用BeautifulSoup合并两个HTML文档
-                if isinstance(pw_res, str) and BeautifulSoup:
-                    soup1 = BeautifulSoup(result, "html.parser")
-                    soup2 = BeautifulSoup(pw_res, "html.parser")
+                #         # 添加到body末尾
+                #         soup1.body.append(hr_tag)
+                #         soup1.body.append(heading)
 
-                    print(
-                        f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"
-                    )
-                    if soup1.body:  # 应该操作body而不是html
-                        # 创建分隔元素
-                        hr_tag = soup1.new_tag("hr")
-                        heading = soup1.new_tag("h2")
-                        heading.string = "Playwright result is as follows"
+                #         # 合并内容
+                #         if soup2.body:
+                #             for element in tqdm.tqdm(
+                #                 soup2.body.children,
+                #                 desc=f"Merging htmls of {url}",
+                #                 total=len(list(soup2.body.children)),
+                #             ):
+                #                 soup1.body.append(element.extract())
+                #         else:
+                #             # 如果soup2没有body，直接添加其内容到body
+                #             print(f"soup2 has no body tag, appending whole soup2 {url}")
+                #             soup1.body.append(soup2)
 
-                        # 添加到body末尾
-                        soup1.body.append(hr_tag)
-                        soup1.body.append(heading)
+                #         result = str(soup1)
+                # else:
+                #     # 如果BeautifulSoup不可用或条件不满足，回退到原始方法
+                #     if result.endswith("</html>") and isinstance(pw_res, str):
+                #         print("falling back to original method", url)
+                #         # only append if both results are html
+                #         # and original result seems normal
+                #         # otherwise might get a lot of garbage
+                #         result = result[: -len("</html>")].strip()
+                #         result = result.replace("</body>", "", 1).strip()
 
-                        # 合并内容
-                        if soup2.body:
-                            for element in tqdm.tqdm(
-                                soup2.body.children,
-                                desc=f"Merging htmls of {url}",
-                                total=len(list(soup2.body.children)),
-                            ):
-                                soup1.body.append(element.extract())
-                        else:
-                            # 如果soup2没有body，直接添加其内容到body
-                            print(f"soup2 has no body tag, appending whole soup2 {url}")
-                            soup1.body.append(soup2)
-
-                        result = str(soup1)
-                else:
-                    # 如果BeautifulSoup不可用或条件不满足，回退到原始方法
-                    if result.endswith("</html>") and isinstance(pw_res, str):
-                        print("falling back to original method", url)
-                        # only append if both results are html
-                        # and original result seems normal
-                        # otherwise might get a lot of garbage
-                        result = result[: -len("</html>")].strip()
-                        result = result.replace("</body>", "", 1).strip()
-
-                    result = (
-                        result
-                        + "<br><br><br> <h2>playwright result is as follows</h2>"
-                        + (
-                            pw_res.replace("<html>", "", 1).replace("<body>", "", 1)
-                            if isinstance(pw_res, str)
-                            else f"play wright result is {pw_res} also.</html>"
-                        )
-                    )
+                #     result = (
+                #         result
+                #         + "<br><br><br> <h2>playwright result is as follows</h2>"
+                #         + (
+                #             pw_res.replace("<html>", "", 1).replace("<body>", "", 1)
+                #             if isinstance(pw_res, str)
+                #             else f"play wright result is {pw_res} also.</html>"
+                #         )
+                #     )
 
     except Exception as err:
         err_flag = True
@@ -338,7 +317,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)
 
-    weekly = asyncio.run(search_weekly_top_stories(25))
+    weekly = asyncio.run(search_weekly_top_stories(15))
     print("get", len(weekly), "top stories.")
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
     print("downloaded", len(downloaded), "stories.")

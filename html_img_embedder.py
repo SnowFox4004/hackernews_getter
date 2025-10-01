@@ -73,14 +73,16 @@ class HTMLImageEmbedder:
         #     # 对于其他格式，保存为JPEG
         #     image.save(output, format="JPEG", quality=85, optimize=True)
         #     self.mime_type = "image/jpeg"
-        image.save(
-            output, format=image.format or "JPEG", optimize=True, compress_level=5
-        )
+        if image.format:
+            image.save(output, format=image.format, optimize=True, compress_level=5)
+        else:
+            image.save(output, format="JPEG", quality=75, optimize=True)
 
         compressed_data = output.getvalue()
         output.close()
 
         # 只有当压缩后的数据更小时才返回压缩后的数据
+        print(f"图片压缩比 {len(compressed_data) / len(image_data):.2f}")
         if len(compressed_data) < len(image_data):
             return compressed_data
         else:
