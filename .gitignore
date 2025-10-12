@@ -18,3 +18,4 @@ lib_studies/**
 .gitignore
 test*.*
 .vscode/settings.json
+outs/**

@@ -43,9 +43,11 @@ jobs:
         # path 也可以是目录，例如 'outputs/'
         retention-days: 7  # 可选：设置 artifact 保留天数（默认 90）
     
-    - name: Upload debug files
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-files
-        path: stories/
-        retention-days: 7
+    # - name: Upload debug files
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: debug-files
+    #     path: stories/
+    #     retention-days: 7
+    - name: Send Issue
+      run: python issue_sender.py
