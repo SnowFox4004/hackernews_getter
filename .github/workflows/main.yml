@@ -1,8 +1,8 @@
 on:
   schedule:
     - cron: '0 0 * * 6'  
-  push:  # 可选：推送代码时也触发，便于测试
-    branches: [ master ]
+  # push:  # 可选：推送代码时也触发，便于测试
+  #   branches: [ master ]
   workflow_dispatch:      # 允许手动触发
 jobs:
   build-and-generate:
@@ -42,6 +42,7 @@ jobs:
         path: outs/ # 你生成的 EPUB 文件路径
         # path 也可以是目录，例如 'outputs/'
         retention-days: 7  # 可选：设置 artifact 保留天数（默认 90）
+        compression-level: 9
     
     # - name: Upload debug files
     #   uses: actions/upload-artifact@v4
