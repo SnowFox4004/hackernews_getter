@@ -27,6 +27,6 @@ jobs:
           sudo apt install -y neofetch python3-pip
           neofetch
       - name: Send Issue
-        with: # Set the secret as an input
+        env: # Set the secret as an input
           CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
         run: python month_trend.py
