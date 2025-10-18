@@ -119,4 +119,4 @@ if __name__ == "__main__":
         f"- {title}\n[{url}]({url})" for title, url in zip(titles, urls)
     )
 
-    send_issue(issue_body=issue_body)
+    send_issue(issue_body=issue_body, labels=["weekly", "automated"])
