@@ -114,7 +114,7 @@ if __name__ == "__main__":
     start_time = int(time.time()) - 7 * 24 * 3600
     end_time = int(time.time())
 
-    titles, urls = get_titles_byTimeRange(10, start_time, end_time)
+    titles, urls = get_titles_byTimeRange(25, start_time, end_time)
     issue_body = "\n".join(
         f"- {title}\n[{url}]({url})" for title, url in zip(titles, urls)
     )
