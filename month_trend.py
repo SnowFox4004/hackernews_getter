@@ -10,11 +10,11 @@ if __name__ == "__main__":
     titles, urls = get_titles_byTimeRange(50, start_time, end_time)
 
     issue_body = "\n".join(
-        f"- {title}\n[{url}]({url})" for title, url in zip(titles, urls)
+        f"{idx}. {title}\n[{url}]({url})"
+        for idx, (title, url) in enumerate(zip(titles, urls))
     )
     (month_date, _) = asyncio.run(get_time_range_last_month())
     last_month = datetime.datetime.fromtimestamp(month_date).strftime("%Y-%m")
-
     send_issue(
         issue_body=issue_body,
         issue_title="Monthly HackerNews stories @ " + last_month,
