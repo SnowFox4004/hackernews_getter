@@ -57,15 +57,15 @@ def send_issue(
     # 配置信息
     token = os.getenv("CLIENT_TOKEN")  # 从环境变量读取令牌
 
-    ################
-    # debug
-    import hashlib
+    # ################
+    # # debug
+    # import hashlib
 
-    token_sha256 = hashlib.sha256(token.encode()).hexdigest()
-    print(f"Using token with SHA256: {token_sha256}")
-    exit(0)
-    # debug end
-    ################
+    # token_sha256 = hashlib.sha256(token.encode()).hexdigest()
+    # print(f"Using token with SHA256: {token_sha256}")
+    # exit(0)
+    # # debug end
+    # ################
 
     repo_owner = "SnowFox4004"  # 替换为你的仓库所有者
     repo_name = "hackernews_getter"  # 替换为你的仓库名
