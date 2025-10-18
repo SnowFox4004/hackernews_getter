@@ -16,6 +16,7 @@ from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
 from html_img_embedder import HTMLImageEmbedder, embed_images_in_html_string
 import origin_page_spider as originSpider
+from utils import get_time_range_last_week
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
@@ -24,14 +25,12 @@ HEADERS = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
 }
 
-async def get_time_range():
-    # timestamp of 1 week ago and now
-    now = int(time.time())
-    one_week_ago = now - 60 * 60 * 24 * 7
-    return one_week_ago, now
 
-
-async def search_weekly_top_stories(num_stories: int):
+async def search_stories_byTimeRange(
+    num_stories: int,
+    start_time: int,
+    end_time: int,
+):
     SEARCH_ENDPOINT = "/search"
     search_url = URL_ENDPOINT + SEARCH_ENDPOINT
 
@@ -39,7 +38,7 @@ async def search_weekly_top_stories(num_stories: int):
     page = 0
     async with httpx.AsyncClient() as client:
         while len(hits) < num_stories:
-            start_time, end_time = await get_time_range()
+            # start_time, end_time = await get_time_range_last_week()
             params = {
                 "tags": "story",
                 "numericFilters": f"created_at_i>{start_time},created_at_i<{end_time}",
@@ -311,7 +310,9 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)
 
-    weekly = asyncio.run(search_weekly_top_stories(20))
+    start_time, end_time = asyncio.run(get_time_range_last_week())
+    weekly = asyncio.run(search_stories_byTimeRange(20, start_time, end_time))
+
     print("get", len(weekly), "top stories.")
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
     print("downloaded", len(downloaded), "stories.")
