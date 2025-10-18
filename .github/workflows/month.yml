@@ -22,10 +22,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt  # 安装你的第三方库
-
-          sudo apt update
-          sudo apt install -y neofetch python3-pip
-          neofetch
       - name: Send Issue
         env: # Set the secret as an input
           CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
