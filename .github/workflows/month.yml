@@ -5,6 +5,10 @@ on:
   #   branches: [ master ]
   workflow_dispatch:
 
+permissions:
+    issues: write  # 允许创建和修改 issue
+    contents: read  # 允许读取仓库内容
+    
 jobs:
   build-and-generate:
     runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行器
