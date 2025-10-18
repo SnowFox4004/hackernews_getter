@@ -24,5 +24,5 @@ jobs:
           pip install -r requirements.txt  # 安装你的第三方库
       - name: Send Issue
         env: # Set the secret as an input
-          CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
+          CLIENT_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: python month_trend.py
