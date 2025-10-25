@@ -3,19 +3,16 @@ import datetime
 import html
 import os
 import random as rnd
-import time
 
 import aiofiles
 import ebooklib.epub as epub
 import httpx
 import tqdm
-import trafilatura
-from bs4 import BeautifulSoup
 
+import origin_page_spider as originSpider
 from concat_htmls import html_files_to_pdf
 from html_generator import HTMLGenerator
-from html_img_embedder import HTMLImageEmbedder, embed_images_in_html_string
-import origin_page_spider as originSpider
+from html_img_embedder import embed_images_in_html_string
 from utils import get_time_range_last_week
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
@@ -30,6 +27,7 @@ async def search_stories_byTimeRange(
     num_stories: int,
     start_time: int,
     end_time: int,
+    title: str = None,
 ):
     SEARCH_ENDPOINT = "/search"
     search_url = URL_ENDPOINT + SEARCH_ENDPOINT
@@ -44,6 +42,8 @@ async def search_stories_byTimeRange(
                 "numericFilters": f"created_at_i>{start_time},created_at_i<{end_time}",
                 "page": page,
             }
+            if title is not None and title:
+                params["query"] = title
             response = await client.get(search_url, params=params)
 
             print(
@@ -55,23 +55,34 @@ async def search_stories_byTimeRange(
     return hits[:num_stories]
 
 
-async def get_story(hit_result: dict):
+async def get_story(hit_id: int):
     get_story_url = f"{URL_ENDPOINT}/items/"
     await asyncio.sleep(rnd.random() * 2)
     async with httpx.AsyncClient(timeout=25) as client:
-        story_id = hit_result["objectID"]
-        story_url = get_story_url + story_id
+        story_id = hit_id
+        story_url = get_story_url + str(story_id)
         story = await client.get(story_url)
         story = story.json()
-        print(f"get story {hit_result.get("title", None) or story_id:>80} done.")
+        print(f"get story {story.get("title", None) or story_id:>80} done.")
         return story
 
 
-async def download_stories(hits: list, save_to_file: bool = False):
+async def download_stories(
+    hits: list, save_to_file: bool = False, output_dir: str = "stories"
+):
+    """
+    Download Hacker News stories and their original content using given ids.
+
+    Args:
+        hits: 待下载的 Hacker News ID | list of story IDs to download
+        save_to_file: 是否保存 HTML 内容到文件 | Whether to save HTML content to files
+
+    """
+
     current_date = datetime.datetime.now().date()
     html_texts = []
 
-    target_dir = "stories/" + f"{current_date.year}-{current_date.month}/"
+    target_dir = output_dir + f"{current_date.year}-{current_date.month}/"
     os.makedirs(target_dir, exist_ok=True)
 
     tasks = [
@@ -222,14 +233,6 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
     err_flag = False
     try:
         async with httpx.AsyncClient(timeout=20, verify=False) as client:
-            # response = await client.get(url, headers=HEADERS, follow_redirects=True)
-            # response.raise_for_status()
-
-            # # try:
-            # #     blog_content = response.content.decode(response.encoding)
-            # # except:
-            # #     blog_content = response.text
-            # blog_content = response.text
             blog_content, err_flag = await originSpider.get_origin(url, HEADERS)
 
             result = blog_content
@@ -239,58 +242,6 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
                     f"{url} 's trafilatura.extract() result is None. \n\n{blog_content[:1000]}"
                 )
                 result = f"<html><body><h1> ERROR </h1><br><a href={url}>{url}</a><p> result is None.</p></body></html>"
-
-                # # 使用BeautifulSoup合并两个HTML文档
-                # if isinstance(pw_res, str) and BeautifulSoup:
-                #     soup1 = BeautifulSoup(result, "html.parser")
-                #     soup2 = BeautifulSoup(pw_res, "html.parser")
-
-                #     print(
-                #         f"have body:? {(soup1.body is not None)=}, {(soup2.body is not None)=}"
-                #     )
-                #     if soup1.body:  # 应该操作body而不是html
-                #         # 创建分隔元素
-                #         hr_tag = soup1.new_tag("hr")
-                #         heading = soup1.new_tag("h2")
-                #         heading.string = "Playwright result is as follows"
-
-                #         # 添加到body末尾
-                #         soup1.body.append(hr_tag)
-                #         soup1.body.append(heading)
-
-                #         # 合并内容
-                #         if soup2.body:
-                #             for element in tqdm.tqdm(
-                #                 soup2.body.children,
-                #                 desc=f"Merging htmls of {url}",
-                #                 total=len(list(soup2.body.children)),
-                #             ):
-                #                 soup1.body.append(element.extract())
-                #         else:
-                #             # 如果soup2没有body，直接添加其内容到body
-                #             print(f"soup2 has no body tag, appending whole soup2 {url}")
-                #             soup1.body.append(soup2)
-
-                #         result = str(soup1)
-                # else:
-                #     # 如果BeautifulSoup不可用或条件不满足，回退到原始方法
-                #     if result.endswith("</html>") and isinstance(pw_res, str):
-                #         print("falling back to original method", url)
-                #         # only append if both results are html
-                #         # and original result seems normal
-                #         # otherwise might get a lot of garbage
-                #         result = result[: -len("</html>")].strip()
-                #         result = result.replace("</body>", "", 1).strip()
-
-                #     result = (
-                #         result
-                #         + "<br><br><br> <h2>playwright result is as follows</h2>"
-                #         + (
-                #             pw_res.replace("<html>", "", 1).replace("<body>", "", 1)
-                #             if isinstance(pw_res, str)
-                #             else f"play wright result is {pw_res} also.</html>"
-                #         )
-                #     )
 
     except Exception as err:
         err_flag = True
@@ -311,7 +262,8 @@ if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)
 
     start_time, end_time = asyncio.run(get_time_range_last_week())
-    weekly = asyncio.run(search_stories_byTimeRange(25, start_time, end_time))
+    weekly = asyncio.run(search_stories_byTimeRange(10, start_time, end_time))
+    weekly = [hit.get("objectID") for hit in weekly]
 
     print("get", len(weekly), "top stories.")
     downloaded = asyncio.run(download_stories(weekly, save_to_file=True))
