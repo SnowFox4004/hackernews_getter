@@ -31,7 +31,7 @@ jobs:
         neofetch
 
     - name: Run Python script
-      run: python hacker_spider.py  # 执行你的主脚本
+      run: python src\hackernews\hacker_spider.py  # 执行你的主脚本
     
     - name: Convert To AZW3
       run: |
