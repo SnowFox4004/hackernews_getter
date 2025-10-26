@@ -58,4 +58,4 @@ jobs:
     - name: Send Issue
       env: # Set the secret as an input
         CLIENT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: python issue_sender.py
+      run: uv run  src/hackernews/issue_sender.py
