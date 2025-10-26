@@ -31,4 +31,4 @@ jobs:
       - name: Send Issue
         env: # Set the secret as an input
           CLIENT_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        run: python src\hackernews\month_trend.py
+        run: python src/hackernews/month_trend.py
