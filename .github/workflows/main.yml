@@ -33,7 +33,7 @@ jobs:
         neofetch
 
     - name: Run Python script
-      run: python src/hackernews/hacker_spider.py  # 执行你的主脚本
+      run: uv run src/hackernews/hacker_spider.py  # 执行你的主脚本
     
     - name: Convert To AZW3
       run: |
