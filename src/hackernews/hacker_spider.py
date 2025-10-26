@@ -68,7 +68,7 @@ async def get_story(hit_id: int):
 
 
 async def download_stories(
-    hits: list, save_to_file: bool = False, output_dir: str = "stories"
+    hits: list, save_to_file: bool = False, output_dir: str = "stories/"
 ):
     """
     Download Hacker News stories and their original content using given ids.
@@ -257,6 +257,7 @@ async def get_original_page(target_dir: str, url: str, id: str, save_flag: bool)
 
     print(f"get original {str(url)[8:50]:>45} done. error?: {err_flag}")
     return result
+
 
 if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)

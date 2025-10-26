@@ -7,6 +7,7 @@ import json
 from typing import Dict, List, Union, Optional
 from utils import iso_to_string, convert_utc_to_local_v2
 
+
 class HTMLGenerator:
     def __init__(self, max_depth: int = 5, max_comments_per_level: int | list = 10):
         """
