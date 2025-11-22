@@ -16,6 +16,9 @@ class HTMLImageEmbedder:
         self.timeout = timeout
         self.max_image_size = max_image_size  # 适用于Kindle设备的最大图片尺寸
         self.client = None
+        self.total_images = 0
+        self.successful_downloads = 0
+        self.compression_ratios = []
 
     async def __aenter__(self):
         self.client = httpx.AsyncClient(timeout=self.timeout)
@@ -82,7 +85,9 @@ class HTMLImageEmbedder:
         output.close()
 
         # 只有当压缩后的数据更小时才返回压缩后的数据
-        print(f"图片压缩比 {len(compressed_data) / len(image_data):.2f}")
+        compression_ratio = len(compressed_data) / len(image_data)
+        print(f"图片压缩比 {compression_ratio:.2f}")
+        self.compression_ratios.append(compression_ratio)
         if len(compressed_data) < len(image_data):
             return compressed_data
         else:
@@ -152,6 +157,9 @@ class HTMLImageEmbedder:
         img_srcs.extend(video_srcs)
         img_srcs.extend(sum(picture_source_srcsets, []))
 
+        # 统计图片标签总数
+        self.total_images = len(img_tags)
+
         tasks = []
         img_data_map = {}
 
@@ -192,6 +200,7 @@ class HTMLImageEmbedder:
                 if img.name != "img":
                     img.name = "img"
                 print(f"成功嵌入图片: {url}")
+                self.successful_downloads += 1
             else:
                 # print(f"保留原链接: {url}")
                 pass
@@ -209,6 +218,31 @@ class HTMLImageEmbedder:
             处理后的HTML字符串，其中图片已转换为base64内嵌格式
         """
         return await self.process_html(html_string)
+
+    def generate_stats_html(self, page_url):
+        """
+        生成统计信息的HTML
+
+        Args:
+            page_url: 页面URL
+
+        Returns:
+            包含统计信息的HTML字符串
+        """
+        avg_compression = sum(self.compression_ratios) / len(self.compression_ratios) if self.compression_ratios else 0
+
+        stats_html = f'''
+<div style="margin-top: 40px; padding: 15px; background-color: #f5f5f5; border-top: 2px solid #ccc; font-family: Arial, sans-serif;">
+    <h3 style="color: #333; margin-bottom: 10px;">页面统计信息</h3>
+    <ul style="list-style-type: none; padding: 0;">
+        <li style="margin-bottom: 5px;"><strong>探测到的图片标签数:</strong> {self.total_images}</li>
+        <li style="margin-bottom: 5px;"><strong>成功获取的图片数:</strong> {self.successful_downloads}</li>
+        <li style="margin-bottom: 5px;"><strong>图片平均压缩率:</strong> {avg_compression:.2%}</li>
+        <li style="margin-bottom: 5px;"><strong>本页URL:</strong> <a href="{page_url}" style="color: #0066cc;">{page_url}</a></li>
+    </ul>
+</div>
+'''
+        return stats_html
 
 
 async def embed_images_in_html(
@@ -267,6 +301,9 @@ async def embed_images_in_html_string(html_string, url, max_image_size=(900, 120
     # 处理HTML
     async with HTMLImageEmbedder(url_root, max_image_size=max_image_size) as embedder:
         processed_html = await embedder.process_html_string(html_string)
+        # 在HTML末尾添加统计信息
+        stats_html = embedder.generate_stats_html(url)
+        processed_html = processed_html.rstrip() + "\n" + stats_html
 
     return processed_html
 
