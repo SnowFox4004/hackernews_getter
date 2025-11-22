@@ -137,19 +137,27 @@ class HTMLImageEmbedder:
     async def process_html(self, html_content):
         """处理HTML内容，嵌入图片"""
         soup = BeautifulSoup(html_content, "html.parser")
-        img_tags = soup.find_all("img")
-        graphic_tags = soup.find_all("graphic")
-        figure_tags = soup.find_all("figure")
 
-        img_tags.extend(graphic_tags)
-        img_tags.extend(figure_tags)
+        img_srcs = [label.get("src", "") for label in soup.find_all("img")]
+        graphic_srcs = [label.get("src", "") for label in soup.find_all("graphic")]
+        figure_srcs = [label.get("src", "") for label in soup.find_all("figure")]
+        video_srcs = [label.get("poster", "") for label in soup.find_all("video")]
+        picture_source_srcsets = [
+            [source.get("srcset", "") for source in picture.find_all("source")]
+            for picture in soup.find_all("picture")
+        ]
+
+        img_srcs.extend(graphic_srcs)
+        img_srcs.extend(figure_srcs)
+        img_srcs.extend(video_srcs)
+        img_srcs.extend(sum(picture_source_srcsets, []))
 
         tasks = []
         img_data_map = {}
 
         # 收集所有需要下载的图片
-        for img in img_tags:
-            src = img.get("src", "")
+        for src in img_srcs:
+            # src = img.get("src", "")
             if not src or self.is_data_uri(src):
                 continue
 
