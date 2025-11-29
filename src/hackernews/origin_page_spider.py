@@ -124,7 +124,7 @@ async def get_origin(url: str, headers: dict):
 
         text_len = BeautifulSoup.BeautifulSoup(content, "html.parser").text
         # print(f"text length of {url} is {len(text_len)}")
-        if content is None or len(text_len) < 500:
+        if content is None or len(str(trafilatura.extract(text_len))) < 1000:
             print(
                 f"simple request result of {str(url)[8:50]:>45} seems bad. trying to use playwright..."
             )
@@ -151,7 +151,7 @@ async def get_origin(url: str, headers: dict):
 
 
 if __name__ == "__main__":
-    url = "https://www.nbcnews.com/news/us-news/death-rates-rose-hospital-ers-private-equity-firms-took-study-finds-rcna233211"
+    url = "https://optuna.cn/"
     blog_content = asyncio.run(
         get_origin(
             url,
@@ -160,12 +160,13 @@ if __name__ == "__main__":
             },
         )
     )
+    print(len(blog_content[0]))
     # print(content)
 
     # import trafilatura
 
     content = trafilatura.extract(
-        blog_content,
+        blog_content[0],
         output_format="txt",
         include_formatting=True,
         favor_recall=True,

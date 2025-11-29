@@ -49,12 +49,12 @@ jobs:
         retention-days: 7  # 可选：设置 artifact 保留天数（默认 90）
         compression-level: 9
     
-    # - name: Upload debug files
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: debug-files
-    #     path: stories/
-    #     retention-days: 7
+    - name: Upload debug files
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-files
+        path: stories/
+        retention-days: 10
     - name: Send Issue
       env: # Set the secret as an input
         CLIENT_TOKEN: ${{ secrets.GITHUB_TOKEN }}

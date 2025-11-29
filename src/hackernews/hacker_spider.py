@@ -263,7 +263,7 @@ if __name__ == "__main__":
     os.makedirs("outs/", exist_ok=True)
 
     start_time, end_time = asyncio.run(get_time_range_last_week())
-    weekly = asyncio.run(search_stories_byTimeRange(15, start_time, end_time))
+    weekly = asyncio.run(search_stories_byTimeRange(25, start_time, end_time))
     weekly = [hit.get("objectID") for hit in weekly]
 
     print("get", len(weekly), "top stories.")
