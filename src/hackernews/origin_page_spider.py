@@ -124,7 +124,7 @@ async def get_origin(url: str, headers: dict):
 
         text_len = BeautifulSoup.BeautifulSoup(content, "html.parser").text
         # print(f"text length of {url} is {len(text_len)}")
-        if content is None or len(str(trafilatura.extract(text_len))) < 1000:
+        if content is None or len(str(trafilatura.extract(text_len))) < 500:
             print(
                 f"simple request result of {str(url)[8:50]:>45} seems bad. trying to use playwright..."
             )
