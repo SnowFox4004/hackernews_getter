@@ -248,7 +248,34 @@ class HTMLImageEmbedder:
 '''
         return stats_html
 
+    def embed_stats(self, html_content, stats_html):
+        """将统计信息嵌入HTML中"""
+        soup = BeautifulSoup(html_content, "html.parser")
+        # print(html_content[:100])
+        # 创建包装div并设置样式
+        wrapper_div = soup.new_tag("div")
+        wrapper_div["style"] = (
+            "margin-top: 40px; padding: 15px; background-color: #f5f5f5; border-top: 2px solid #ccc; font-family: Arial, sans-serif;"
+        )
 
+        # 解析stats_html为BeautifulSoup对象
+        stats_soup = BeautifulSoup(stats_html, "html.parser")
+
+        # 将统计信息添加到包装div中
+        wrapper_div.append(stats_soup)
+
+        # 确保body标签存在
+        if soup.body is None:
+            # 如果没有body标签，创建一个
+            body_tag = soup.new_tag("body")
+            soup.html.append(body_tag)
+
+        # 将包装div插入到body的末尾
+        soup.body.append(wrapper_div)
+        return str(soup)
+
+
+# deprecated
 async def embed_images_in_html(
     html_file_path, base_url, output_file_path=None, max_image_size=(900, 1200)
 ):
@@ -307,7 +334,8 @@ async def embed_images_in_html_string(html_string, url, max_image_size=(900, 120
         processed_html = await embedder.process_html_string(html_string)
         # 在HTML末尾添加统计信息
         stats_html = embedder.generate_stats_html(url)
-        processed_html = processed_html.rstrip() + "\n" + stats_html
+        # processed_html = processed_html.rstrip() + "\n" + stats_html
+        processed_html = embedder.embed_stats(processed_html, stats_html)
 
     return processed_html
 
@@ -315,11 +343,13 @@ async def embed_images_in_html_string(html_string, url, max_image_size=(900, 120
 # 使用示例
 async def main():
     # 请根据实际情况修改这些参数
-    html_file_path = r"C:\Users\SnowFox4004\Desktop\程序\py\hackernews\stories\2025-9\45302065_ori.html"  # 输入的HTML文件路径
-    base_url = "https://www.jeffgeerling.com/"  # 原始页面的完整URL
+    html_file_path = r"C:\Users\SnowFox4004\Desktop\程序\py\hackernews\stories\2025-11\45959795_ori.html"  # 输入的HTML文件路径
+    base_url = "https://www.windowslatest.com/"  # 原始页面的完整URL
     output_file_path = "output_embedded.html"  # 输出文件路径（可选）
 
-    await embed_images_in_html(html_file_path, base_url, output_file_path)
+    await embed_images_in_html_string(
+        open(html_file_path, "r", encoding="utf-8").read(), base_url, output_file_path
+    )
 
 
 if __name__ == "__main__":
