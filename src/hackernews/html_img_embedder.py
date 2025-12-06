@@ -264,6 +264,11 @@ class HTMLImageEmbedder:
         # 将统计信息添加到包装div中
         wrapper_div.append(stats_soup)
 
+        if soup.html is None:
+            # 如果没有html标签，创建一个
+            html_tag = soup.new_tag("html")
+            soup.append(html_tag)
+
         # 确保body标签存在
         if soup.body is None:
             # 如果没有body标签，创建一个
