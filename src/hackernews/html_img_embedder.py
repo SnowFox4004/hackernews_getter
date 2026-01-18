@@ -330,12 +330,16 @@ async def embed_images_in_html_string(html_string, url, max_image_size=(900, 120
     Returns:
         处理后的HTML字符串，其中图片已转换为base64内嵌格式
     """
-    # 获取url根目录
+    # 解析URL，获取完整的页面路径作为base_url
+    # 这样urljoin可以正确处理：
+    # - 绝对URL（如 https://example.com/img.jpg）：直接使用
+    # - 绝对路径（如 /images/photo.jpg）：从根目录开始拼接
+    # - 相对路径（如 photo.jpg 或 ../images/photo.jpg）：相对于当前页面路径解析
     parsed_url = urlparse(url)
-    url_root = str(parsed_url.scheme) + "://" + str(parsed_url.netloc)
+    base_url = str(parsed_url.scheme) + "://" + str(parsed_url.netloc) + str(parsed_url.path)
 
     # 处理HTML
-    async with HTMLImageEmbedder(url_root, max_image_size=max_image_size) as embedder:
+    async with HTMLImageEmbedder(base_url, max_image_size=max_image_size) as embedder:
         processed_html = await embedder.process_html_string(html_string)
         # 在HTML末尾添加统计信息
         stats_html = embedder.generate_stats_html(url)
