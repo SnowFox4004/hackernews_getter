@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import html
+import json
 import os
 import random as rnd
 
@@ -16,11 +17,22 @@ from html_img_embedder import embed_images_in_html_string
 from utils import get_time_range_last_week
 
 URL_ENDPOINT = "https://hn.algolia.com/api/v1"
+HN_API_ENDPOINT = "https://hacker-news.firebaseio.com/v0"
+
 generator = HTMLGenerator(max_depth=3, max_comments_per_level=[5, 3, 3])
 
 HEADERS = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
 }
+
+
+async def get_comment_rank(item_id: int) -> list:
+    item_url = HN_API_ENDPOINT + f"/item/{item_id}.json"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(item_url, timeout=30)
+        item_data = resp.json()
+        return item_data.get("kids", [])
+    return []
 
 
 async def search_stories_byTimeRange(
@@ -63,6 +75,13 @@ async def get_story(hit_id: int):
         story_url = get_story_url + str(story_id)
         story = await client.get(story_url)
         story = story.json()
+
+        comment_ranks = await get_comment_rank(story_id)
+        for comm in story["children"]:
+            if comm["id"] in comment_ranks:
+                comm["points"] = comment_ranks.index(comm["id"])
+
+        story["children"].sort(key=lambda x: x.get("points", None) or -9999999999999)
         print(f"get story {story.get("title", None) or story_id:>80} done.")
         return story
 
