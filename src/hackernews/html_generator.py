@@ -185,9 +185,184 @@ class HTMLGenerator:
             .replace("'", "&#x27;")
         )
 
+    def _parse_hn_markup(self, text: str) -> str:
+        r"""
+        Parse Hacker News markup language and convert to HTML
+
+        Hacker News markup rules:
+        - Blank lines separate paragraphs
+        - Text surrounded by asterisks is italicized
+        - Use \* or ** for literal asterisk
+        - Text after a blank line indented by 2+ spaces is verbatim (code)
+        - URLs become links (except in submission text field)
+        - URLs in <angle brackets> are linked correctly
+
+        Args:
+            text: Text with Hacker News markup
+
+        Returns:
+            HTML formatted text with proper spacing
+        """
+        if not text:
+            return ""
+
+        # Split by blank lines (two or more newlines)
+        paragraphs = text.split('\n\n')
+        html_parts = []
+
+        for para in paragraphs:
+            # Check if this is a code block (indented by 2+ spaces after blank line)
+            # A code block is when ALL non-empty lines are indented by 2+ spaces
+            # Use the original paragraph to preserve indentation info
+            lines = para.split('\n')
+            is_code_block = True
+
+            for line in lines:
+                stripped = line.lstrip()
+                if stripped:  # Check non-empty lines
+                    # Check if the line is indented by 2+ spaces or a tab
+                    indent_len = len(line) - len(stripped)
+                    if indent_len < 2:
+                        is_code_block = False
+                        break
+
+            if is_code_block:
+                # Code block - preserve formatting and add spacing
+                # Preserve the original indentation in the code
+                # Remove leading/trailing whitespace but keep internal structure
+                para_content = para.strip()
+                code_content = self._escape_html(para_content)
+                html_parts.append(f' <pre><code>{code_content}</code></pre> ')
+            else:
+                # Regular paragraph - process inline markup
+                # Strip the paragraph for regular text
+                para_content = para.strip()
+                if not para_content:
+                    continue
+
+                processed_lines = []
+                for line in para_content.split('\n'):
+                    processed_line = self._process_inline_markup(line)
+                    processed_lines.append(processed_line)
+
+                para_text = ' '.join(processed_lines)
+                html_parts.append(f' <p>{para_text}</p> ')
+
+        return ''.join(html_parts)
+
+    def _process_inline_markup(self, line: str) -> str:
+        """
+        Process inline markup within a line (italics, URLs, escapes)
+
+        Args:
+            line: Single line of text
+
+        Returns:
+            Processed HTML line
+        """
+        if not line:
+            return ""
+
+        import re
+
+        # First, handle escapes (\* for literal asterisk)
+        # Need to process this before handling italics
+        result = line.replace('\\*', 'ESCAPED_ASTERISK')
+
+        # Handle URLs in <angle brackets> first - replace with a temporary marker
+        # This prevents nested <a> tags
+        def angle_bracket_url_replacer(match):
+            url = match.group(1)
+            # Create a unique marker
+            marker = f'__URL_MARKER_{len(url)}_{hash(url)}__'
+            # Store the URL for later replacement
+            if not hasattr(self, '_url_markers'):
+                self._url_markers = {}
+            self._url_markers[marker] = url
+            return f' {marker} '
+
+        result = re.sub(r'<(https?://[^>]+)>', angle_bracket_url_replacer, result)
+
+        # Handle regular URLs - convert to links
+        def url_replacer(match):
+            url = match.group(1)
+            return f' <a href="{url}">{url}</a> '
+
+        url_pattern = r'(https?://[^\s<>)\]]+)'
+        result = re.sub(url_pattern, url_replacer, result)
+
+        # Handle italics (*text*)
+        # Need to find matching asterisk pairs
+        result = self._parse_italics(result)
+
+        # Convert URL markers back to links
+        if hasattr(self, '_url_markers'):
+            for marker, url in self._url_markers.items():
+                result = result.replace(marker, f' <a href="{url}">{url}</a> ')
+            self._url_markers.clear()
+
+        # Convert escaped asterisks back
+        result = result.replace('ESCAPED_ASTERISK', '*')
+
+        return result
+
+    def _parse_italics(self, text: str) -> str:
+        """
+        Parse italic markup (*text*) in text
+
+        Args:
+            text: Text to parse
+
+        Returns:
+            Text with italics converted to HTML
+        """
+        if not text:
+            return ""
+
+        result = []
+        i = 0
+
+        while i < len(text):
+            char = text[i]
+
+            if char == '*':
+                # Check if this is the start or end of italic
+                # Need to check if it's not followed by whitespace and not preceded by whitespace
+                # Also need to handle ** as literal asterisk (already escaped to ESCAPED_ASTERISK)
+                is_start = False
+                is_end = False
+
+                # Check if this could be start of italic
+                if i + 1 < len(text) and text[i + 1] not in [' ', '\t', '\n', '*']:
+                    # Look backward to see if we're not already in a word
+                    if i == 0 or text[i - 1] in [' ', '\t', '\n', '<', '>']:
+                        is_start = True
+
+                # Check if this could be end of italic
+                if i > 0 and text[i - 1] not in [' ', '\t', '\n', '*']:
+                    # Look forward to see if we're ending a word
+                    if i + 1 == len(text) or text[i + 1] in [' ', '\t', '\n', '<', '>']:
+                        is_end = True
+
+                if is_start:
+                    result.append(' <i>')
+                    i += 1
+                elif is_end:
+                    result.append('</i> ')
+                    i += 1
+                else:
+                    # Lone asterisk, treat as literal
+                    result.append('*')
+                    i += 1
+            else:
+                result.append(char)
+                i += 1
+
+        return ''.join(result)
+
     def _format_text(self, text: str) -> str:
         """
-        Format text for HTML display, handling basic markup
+        Format text for HTML display, handling Hacker News markup
 
         Args:
             text: Text to format
@@ -198,19 +373,10 @@ class HTMLGenerator:
         if not text:
             return ""
 
-        # Handle basic HTML tags that might be in the text
-        # Convert paragraph markers
-        if "<p>" in text:
-            if not text.startswith("<p>"):
-                text = "<p>" + text
-            text = text.replace("<p>", "</p><p>")
-        # text = self._escape_html(text)
-        # Handle links - this is a simplified approach
-        # text = text.replace("<a href=", "<a href=")
-        # Preserve line breaks
-        text = text.replace("\n", "<br>")
+        # Parse Hacker News markup
+        result = self._parse_hn_markup(text)
 
-        return text
+        return result
 
     def save_html(self, story_data: Dict, filename: str):
         """
