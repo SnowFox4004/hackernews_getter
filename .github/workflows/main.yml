@@ -29,7 +29,7 @@ jobs:
         uv add playwright
         uv run python -m playwright install --with-deps
         sudo apt update
-        patchright install chromium
+        uv run python -m patchright install chromium
         sudo apt install -y neofetch python3-pip libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0 libffi-dev libjpeg-dev libopenjp2-7-dev
         neofetch
 
