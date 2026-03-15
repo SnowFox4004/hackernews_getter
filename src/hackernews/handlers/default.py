@@ -17,6 +17,75 @@ from playwright_stealth import Stealth
 from handlers import set_default_handler
 
 
+def convert_trafilatura_tables(html_content: str) -> str:
+    """Convert trafilatura-style tables to standard HTML tables.
+
+    Trafilatura extracts tables using non-standard tags:
+    - <row> instead of <tr>
+    - <cell> instead of <td>/<th>
+    - span attribute on <row> (ignored as semantics differ from HTML rowspan)
+
+    This function converts them to standard HTML for EPUB compatibility.
+
+    Args:
+        html_content: HTML content possibly containing trafilatura tables
+
+    Returns:
+        HTML content with standard table markup
+    """
+    tgt = html_content.find("th")
+    # print("sdsddsdsdsdssssssssssssssssssssss")
+    # print(html_content[2000:4000])
+
+    if not html_content or "<row" not in html_content:
+        return html_content
+
+    soup = BeautifulSoup(html_content, "html.parser")
+
+    for table in soup.find_all("table"):
+        # Skip tables that already use standard HTML
+        if table.find("tr"):
+            continue
+
+        rows = table.find_all("row")
+        if not rows:
+            continue
+
+        # Process each row
+        for row_idx, row in enumerate(rows):
+            # Create new tr element
+            new_tr = soup.new_tag("tr")
+
+            # Note: We ignore the 'span' attribute as trafilatura's span
+            # semantics differ from HTML rowspan. Direct conversion would
+            # cause rendering errors in EPUB readers.
+
+            # Process cells in this row
+            cells = row.find_all("cell")
+            for cell_idx, cell in enumerate(cells):
+                # First row uses <th>, others use <td>
+                if row_idx == 0:
+                    new_td = soup.new_tag("th")
+
+                else:
+                    new_td = soup.new_tag("td")
+
+                # Extract content, removing <p> wrapper if present
+                # Use extract() instead of copy.copy() to properly move content
+                # copy.copy() fails to preserve NavigableString content
+
+                source = cell
+                for child in list(source.children):
+                    new_td.append(child)
+
+                new_tr.append(new_td)
+
+            # Replace old row with new tr
+            row.replace_with(new_tr)
+
+    return str(soup)
+
+
 async def get_page_content_playwright(url: str, headless: bool = True) -> str | None:
     """Fetch page content using Playwright browser.
 
@@ -51,7 +120,7 @@ async def get_page_content_playwright(url: str, headless: bool = True) -> str | 
         content = trafilatura.extract(
             content,
             output_format="html",
-            include_formatting=True,
+            include_formatting=False,  # Must be False to preserve table content with bold tags
             favor_recall=True,
             include_images=True,
         )
@@ -78,12 +147,12 @@ async def get_page_content_requests(url: str, headers: dict) -> str:
         except Exception as err:
             return f"HTTPX Error: {err}"
         blog_content = response.text
-
         result = trafilatura.extract(
             blog_content,
             output_format="html",
-            include_formatting=True,
+            include_formatting=False,  # Must be False to preserve table content with bold tags
             favor_recall=True,
+            include_tables=True,
             include_images=True,
         )
 
@@ -165,6 +234,9 @@ async def default_handler(url: str, headers: dict, headless: bool = True) -> tup
         print(f"Error processing {str(url)[8:50]:>45}: {e}")
         is_error = True
         content = f"<h1> ERROR </h1><br><a href={url}>{url}</a><p> get origin Exception occurred: {e}</p>"
+
+    # Convert trafilatura-style tables to standard HTML tables
+    content = convert_trafilatura_tables(content)
 
     return content, is_error
 

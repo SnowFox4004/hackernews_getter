@@ -187,6 +187,20 @@ def construct_epub_book(html_texts: list[str, str]):
     .comment-level-3 { margin-left: 60px; }
     .comment-level-4 { margin-left: 80px; }
     .comment-level-5 { margin-left: 100px; }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+    }
+    th, td {
+        border: 1px solid #999999;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+    }
     """
 
     # 创建EPUB CSS项目
