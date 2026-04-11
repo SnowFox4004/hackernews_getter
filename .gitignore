@@ -19,3 +19,4 @@ lib_studies/**
 test*.*
 .vscode/settings.json
 outs/**
+docs/**

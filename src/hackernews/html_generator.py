@@ -9,7 +9,8 @@ from utils import iso_to_string, convert_utc_to_local_v2
 
 
 class HTMLGenerator:
-    def __init__(self, max_depth: int = 5, max_comments_per_level: int | list = 10):
+
+    def __init__(self, max_depth: int = 5, max_comments_per_level: int | list = 4):
         """
         Initialize the HTML generator with configurable options
 
@@ -394,7 +395,7 @@ class HTMLGenerator:
 # Example usage
 if __name__ == "__main__":
     # Example of how to use the HTMLGenerator
-    generator = HTMLGenerator(max_depth=4, max_comments_per_level=[8, 6, 3, 1])
+    generator = HTMLGenerator(max_depth=4, max_comments_per_level=[5, 2, 1, 1])
 
     # Load example data
     with open(r"example2.json", "r", encoding="utf-8") as f:
