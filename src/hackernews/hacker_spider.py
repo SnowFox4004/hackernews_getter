@@ -35,6 +35,43 @@ async def get_comment_rank(item_id: int) -> list:
     return []
 
 
+async def sort_comments_recursively(
+    comments: list[dict],
+    parent_id: int,
+    current_depth: int,
+    max_depth: int,
+) -> None:
+    """Recursively sort comments by Hacker News official API order.
+
+    Args:
+        comments: List of comment dictionaries to sort
+        parent_id: ID of the parent item (story or comment)
+        current_depth: Current nesting depth (0 for first-level comments)
+        max_depth: Maximum depth to sort
+    """
+    if current_depth >= max_depth or not comments:
+        return
+
+    # Get official ranking order from HN API
+    comment_ranks = await get_comment_rank(parent_id)
+
+    # Set sorting weight for each comment
+    for comm in comments:
+        if comm["id"] in comment_ranks:
+            comm["points"] = comment_ranks.index(comm["id"])
+
+    # Sort by weight
+    comments.sort(key=lambda x: x.get("points", None) or -999999999)
+
+    # Recursively process children of each comment
+    for comm in comments:
+        children = comm.get("children", [])
+        if children:
+            await sort_comments_recursively(
+                children, comm["id"], current_depth + 1, max_depth
+            )
+
+
 async def search_stories_byTimeRange(
     num_stories: int,
     start_time: int,
@@ -76,14 +113,16 @@ async def get_story(hit_id: int):
         story = await client.get(story_url)
         story = story.json()
 
-        comment_ranks = await get_comment_rank(story_id)
-        for comm in story["children"]:
-            if comm["id"] in comment_ranks:
-                comm["points"] = comment_ranks.index(comm["id"])
+    # Recursively sort comments by HN official API order
+    await sort_comments_recursively(
+        story["children"],
+        story_id,
+        0,
+        generator.max_depth,
+    )
 
-        story["children"].sort(key=lambda x: x.get("points", None) or -9999999999999)
-        print(f"get story {story.get("title", None) or story_id:>80} done.")
-        return story
+    print(f"get story {story.get("title", None) or story_id:>80} done.")
+    return story
 
 
 async def download_stories(
